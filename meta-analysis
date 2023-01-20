@@ -1,0 +1,265 @@
+
+R Code: Estimates of HBV infection in Nigeria 
+ 
+An example of the R script used to run the random-effect model based on proportion is shown below:
+
+% Read in data (Adata) from file and check summary
+
+library(readr)
+Adata <- read_csv("Adata.csv")
+summary(Adata)
+
+
+% Convert "cases" and "total" columns from character to numeric
+
+sapply(Adata, mode)
+transform(Adata, cases=as.numeric(cases),
+          total=as.numeric(total))
+
+% Save the transformed data frame as D
+
+D <- transform(Adata, cases=as.numeric(cases),
+               total=as.numeric(total))
+sapply(D, mode)
+summary(D)
+
+% Load the metafor packages required to run the meta-analysis and also weightr and meta
+
+library(metafor)
+library(meta)
+library(weightr)
+
+% Calculate overall summary proportion 
+
+ies.logit=escalc(xi=cases,ni=total,measure="PLO",data=D)
+pes.logit=rma(yi,vi,data=ies.logit,method="DL",weighted=TRUE)
+pes=predict(pes.logit,transf=transf.ilogit)
+print(pes,digits=6);print(pes.logit,digits=4);confint(pes.logit,digits=2)
+
+% Pooled prevalence of HBV in Nigeria from 2010 to 2019 
+ 
+{r} pes.summary=metaprop(cases, total, authoryear, data=D, sm="PLO", method.tau="DL", method.ci="NAsm") forest(pes.summary, xlim=c(0.00,0.4), rightcols=FALSE, leftcols=c("studlab", "event", "n", "effect", "ci", "w.random"), leftlabs=c("Study", "Events", "Total", "Proportion", "95% C.I.", "Weight"), xlab="Prevalence of HBV", smlab="", weight.study="random", squaresize=0.5, col.square="navy", col.square.lines="navy", col.diamond="maroon", col.diamond.lines="maroon", pooled.totals=TRUE, comb.fixed=FALSE, fs.hetstat=10, print.tau2=TRUE, print.Q=TRUE, print.pval.Q=TRUE, print.I2=TRUE, digits=2)
+
+% Subgroup analysis of prevalence estimates- moderator variable: setting
+
+pes.logit.rural=rma(yi, vi, data=ies.logit,
+                    subset=setting=="Rural",
+                    method="DL")
+pes.logit.urban=rma(yi, vi, data=ies.logit,
+                    subset=setting=="Urban",
+                    method="DL")
+pes.logit.urbanandrural=rma(yi, vi, data=ies.logit,
+                            subset=setting=="Urban and Rural",
+                            method="DL")
+pes.rural=predict(pes.logit.rural, transf=transf.ilogit, digits=5)
+pes.urban=predict(pes.logit.urban, transf=transf.ilogit, digits=5)
+pes.urbanandrural=predict(pes.logit.urbanandrural, transf=transf.ilogit, digits=5)
+dat.diffvar=data.frame(estimate=c(pes.logit.rural$b, pes.logit.urban$b, pes.logit.urbanandrural$b),
+                       stderror=c(pes.logit.rural$se, pes.logit.urban$se, pes.logit.urbanandrural$se),
+                       setting=c("Rural", "Urban", "Urban and Rural"),
+                       tau2=round(c(pes.logit.rural$tau2,
+                                    pes.logit.urban$tau2,
+                                    pes.logit.urbanandrural$tau2), 3))
+subganal.setting=rma(estimate, sei=stderror, data=dat.diffvar,
+                     mods=~setting, method="FE")
+pes.logit.setting=rma(estimate, sei=stderror, method="FE", data=dat.diffvar)
+pes.setting=predict(pes.logit.setting, transf=transf.ilogit)
+print(pes.rural, digits=6); print(pes.logit.rural, digits=3)
+% Moderator variable: region
+pes.logit.northwest=rma(yi, vi, data=ies.logit,
+                        subset=region=="North West",
+                        method="DL")
+pes.logit.northeast=rma(yi, vi, data=ies.logit,
+                        subset=region=="North East",
+                        method="DL")
+pes.logit.southwest=rma(yi, vi, data=ies.logit,
+                        subset=region=="South West",
+                        method="DL")
+pes.logit.southeast=rma(yi, vi, data=ies.logit,
+                        subset=region=="South East",
+                        method="DL")
+pes.logit.southsouth=rma(yi, vi, data=ies.logit,
+                         subset=region=="South South",
+                         method="DL")
+pes.logit.northcentral=rma(yi, vi, data=ies.logit,
+                           subset=region=="North Central",
+                           method="DL")
+pes.logit.mixed=rma(yi, vi, data=ies.logit,
+                    subset=region=="Mixed",
+                    method="DL")
+pes.northwest=predict(pes.logit.northwest, transf=transf.ilogit, digits=5)
+pes.northeast=predict(pes.logit.northeast, transf=transf.ilogit, digits=5)
+pes.southwest=predict(pes.logit.southwest, transf=transf.ilogit, digits=5)
+pes.southeast=predict(pes.logit.southeast, transf=transf.ilogit, digits=5)
+pes.southsouth=predict(pes.logit.southsouth, transf=transf.ilogit, digits=5)
+pes.northcentral=predict(pes.logit.northcentral, transf=transf.ilogit, digits=5)
+pes.mixed=predict(pes.logit.mixed, transf=transf.ilogit, digits=5)
+dat.diffvar=data.frame(estimate=c(pes.logit.northwest$b, pes.logit.northeast$b, pes.logit.southwest$b, pes.logit.southeast$b, pes.logit.southsouth$b, pes.logit.northcentral$b, pes.logit.mixed$b),
+                       stderror=c(pes.logit.northwest$se, pes.logit.northeast$se, pes.logit.southwest$se, pes.logit.southeast$se, pes.logit.southsouth$se, pes.logit.northcentral$se, pes.logit.mixed$se),
+                       region=c("North West", "North East", "South West", "South East", "South South", "North Central", "Mixed"),
+                       tau2=round(c(pes.logit.northwest$tau2,
+                                    pes.logit.northeast$tau2,
+                                    pes.logit.southwest$tau2,
+                                    pes.logit.southeast$tau2,
+                                    pes.logit.southsouth$tau2,
+                                    pes.logit.northcentral$tau2,
+                                    pes.logit.mixed$tau2), 3))
+subganal.region=rma(estimate, sei=stderror, data=dat.diffvar,
+                    mods=~region, method="FE")
+pes.logit.region=rma(estimate, sei=stderror, method="FE", data=dat.diffvar)
+pes.region=predict(pes.logit.region, transf=transf.ilogit)
+print(pes.northwest, digits=6); print(pes.logit.northwest, digits=3)
+
+% Moderator variable: diagnosis
+
+pes.logit.elisa=rma(yi, vi, data=ies.logit,
+                    subset=diagnosis=="ELISA",
+                    method="DL")
+pes.logit.rdt=rma(yi, vi, data=ies.logit,
+                  subset=diagnosis=="RDT",
+                  method="DL")
+pes.logit.pcr=rma(yi, vi, data=ies.logit,
+                  subset=diagnosis=="PCR",
+                  method="DL")
+pes.logit.eia=rma(yi, vi, data=ies.logit,
+                  subset=diagnosis=="EIA",
+                  method="DL")
+pes.logit.ict=rma(yi, vi, data=ies.logit,
+                  subset=diagnosis=="ICT",
+                  method="DL")
+pes.elisa=predict(pes.logit.elisa, transf=transf.ilogit, digits=5)
+pes.rdt=predict(pes.logit.rdt, transf=transf.ilogit, digits=5)
+pes.pcr=predict(pes.logit.pcr, transf=transf.ilogit, digits=5)
+pes.eia=predict(pes.logit.eia, transf=transf.ilogit, digits=5)
+pes.ict=predict(pes.logit.ict, transf=transf.ilogit, digits=5)
+dat.diffvar=data.frame(estimate=c(pes.logit.elisa$b, pes.logit.rdt$b, pes.logit.pcr$b, pes.logit.eia$b, pes.logit.ict$b),
+                       stderror=c(pes.logit.elisa$se, pes.logit.rdt$se, pes.logit.pcr$se, pes.logit.eia$se, pes.logit.ict$se),
+                       diagnosis=c("ELISA", "RDT", "PCR", "EIA", "ICT"),
+                       tau2=round(c(pes.logit.elisa$tau2,
+                                    pes.logit.rdt$tau2,
+                                    pes.logit.pcr$tau2,
+                                    pes.logit.eia$tau2,
+                                    pes.logit.ict$tau2), 3))
+subganal.diagnosis=rma(estimate, sei=stderror, data=dat.diffvar,
+                       mods=~diagnosis, method="FE")
+pes.logit.diagnosis=rma(estimate, sei=stderror, method="FE", data=dat.diffvar)
+pes.diagnosis=predict(pes.logit.diagnosis, transf=transf.ilogit)
+print(pes.elisa, digits=6); print(pes.logit.elisa, digits=3)
+
+
+% Moderator variable: publication year
+
+pes.logit.2010_2014=rma(yi, vi, data=ies.logit,
+                        subset=publicationyear=="2010-2014",
+                        method="DL")
+pes.logit.2015_2019=rma(yi, vi, data=ies.logit,
+                        subset=publicationyear=="2015-2019",
+                        method="DL")
+pes.2010_2014=predict(pes.logit.2010_2014, transf=transf.ilogit, digits=5)
+pes.2015_2019=predict(pes.logit.2015_2019, transf=transf.ilogit, digits=5)
+dat.diffvar=data.frame(estimate=c(pes.logit.2010_2014$b, pes.logit.2015_2019$b),
+                       stderror=c(pes.logit.2010_2014$se, pes.logit.2015_2019$se),
+                       publicationyear=c("2010-2014", "2015-2019"),
+                       tau2=round(c(pes.logit.2010_2014$tau2,
+                                    pes.logit.2015_2019$tau2), 3))
+subganal.publicationyear=rma(estimate, sei=stderror, data=dat.diffvar,
+                             mods=~publicationyear, method="FE")
+pes.logit.publicationyear=rma(estimate, sei=stderror, method="FE", data=dat.diffvar)
+pes.publicationyear=predict(pes.logit.publicationyear, transf=transf.ilogit)
+print(pes.2010_2014, digits=6); print(pes.logit.2010_2014, digits=3)
+
+% Moderator variable: study group
+
+pes.logit.blooddonor=rma(yi, vi, data=ies.logit,
+                         subset=studygroup=="Blood donor",
+                         method="DL")
+pes.logit.pregnantwomen=rma(yi, vi, data=ies.logit,
+                            subset=studygroup=="Pregnant women",
+                            method="DL")
+pes.logit.hivpositive=rma(yi, vi, data=ies.logit,
+                          subset=studygroup=="HIV positive",
+                          method="DL")
+pes.logit.hivpositivepregnantwomen=rma(yi, vi, data=ies.logit,
+                                       subset=studygroup=="HIV positive pregnant women",
+                                       method="DL")
+pes.logit.others=rma(yi, vi, data=ies.logit,
+                     subset=studygroup=="Others",
+                     method="DL")
+pes.blooddonor=predict(pes.logit.blooddonor, transf=transf.ilogit, digits=5)
+pes.pregnantwomen=predict(pes.logit.pregnantwomen, transf=transf.ilogit, digits=5)
+pes.hivpositive=predict(pes.logit.hivpositive, transf=transf.ilogit, digits=5)
+pes.hivpositivepregnantwomen=predict(pes.logit.hivpositivepregnantwomen, transf=transf.ilogit, digits=5)
+pes.others=predict(pes.logit.others, transf=transf.ilogit, digits=5)
+dat.diffvar=data.frame(estimate=c(pes.logit.blooddonor$b, pes.logit.pregnantwomen$b, pes.logit.hivpositive$b, pes.logit.hivpositivepregnantwomen$b, pes.logit.others$b),
+                       stderror=c(pes.logit.blooddonor$se, pes.logit.pregnantwomen$se, pes.logit.hivpositive$se, pes.logit.hivpositivepregnantwomen$se, pes.logit.others$se),
+                       studygroup=c("Blood donor", "Pregnant women", "HIV positive", "HIV positive pregnant women", "Others"),
+                       tau2=round(c(pes.logit.blooddonor$tau2,
+                                    pes.logit.pregnantwomen$tau2,
+                                    pes.logit.hivpositive$tau2,
+                                    pes.logit.hivpositivepregnantwomen$tau2,
+                                    pes.logit.others$tau2), 3))
+subganal.studygroup=rma(estimate, sei=stderror, data=dat.diffvar,
+                        mods=~studygroup, method="FE")
+pes.logit.studygroup=rma(estimate, sei=stderror, method="FE", data=dat.diffvar)
+pes.studygroup=predict(pes.logit.studygroup, transf=transf.ilogit)
+print(pes.blooddonor, digits=6); print(pes.logit.blooddonor, digits=3)
+
+% Moderator Variable: age
+
+pes.logit.children=rma(yi, vi, data=ies.logit,
+                       subset=age=="Children",
+                       method="DL")
+pes.logit.adult=rma(yi, vi, data=ies.logit,
+                    subset=age=="Adult",
+                    method="DL")
+pes.logit.childrenandadult=rma(yi, vi, data=ies.logit,
+                               subset=age=="Children and adult",
+                               method="DL")
+pes.logit.notstated=rma(yi, vi, data=ies.logit,
+                        subset=age=="Not stated",
+                        method="DL")
+pes.children=predict(pes.logit.children, transf=transf.ilogit, digits=5)
+pes.adult=predict(pes.logit.adult, transf=transf.ilogit, digits=5)
+pes.childrenandadult=predict(pes.logit.childrenandadult, transf=transf.ilogit, digits=5)
+pes.notstated=predict(pes.logit.notstated, transf=transf.ilogit, digits=5)
+dat.diffvar=data.frame(estimate=c(pes.logit.children$b, pes.logit.adult$b, pes.logit.childrenandadult$b, pes.logit.notstated$b),
+                       stderror=c(pes.logit.children$se, pes.logit.adult$se, pes.logit.childrenandadult$se, pes.logit.notstated$se ),
+                       age=c("Chilldren", "Adult", "Children and Adult", "Not stated"),
+                       tau2=round(c(pes.logit.children$tau2,
+                                    pes.logit.adult$tau2,
+                                    pes.logit.childrenandadult$tau2,
+                                    pes.logit.notstated$tau2), 3))
+subganal.age=rma(estimate, sei=stderror, data=dat.diffvar,
+                 mods=~age, method="FE")
+pes.logit.age=rma(estimate, sei=stderror, method="FE", data=dat.diffvar)
+pes.age=predict(pes.logit.age, transf=transf.ilogit)
+print(pes.children, digits=6); print(pes.logit.children, digits=3)
+
+% Moderator variable: quality grade
+
+pes.logit.lessthanorequal6=rma(yi, vi, data=ies.logit,
+                                   subset=qualitygrade=="Less than or equal 6",
+                                   method="DL")
+pes.logit.greaterthan6=rma(yi, vi, data=ies.logit,
+                               subset=qualitygrade=="Greater than 6",
+                               method="DL")
+pes.lessthanorequal6=predict(pes.logit.lessthanorequal6, transf=transf.ilogit, digits=5)
+pes.greaterthan6=predict(pes.logit.greaterthan6, transf=transf.ilogit, digits=5)
+dat.diffvar=data.frame(estimate=c(pes.logit.lessthanorequal6$b, pes.logit.greaterthan6$b),
+                       stderror=c(pes.logit.lessthanorequal6$se, pes.logit.greaterthan6$se),
+                       qualitygrade=c("Less than or equal 6", "Greater than 6"),
+                       tau2=round(c(pes.logit.lessthanorequal6$tau2,
+                                    pes.logit.greaterthan6$tau2), 3))
+subganal.qualitygrade=rma(estimate, sei=stderror, data=dat.diffvar,
+                     mods=~qualitygrade, method="FE")
+pes.logit.qualitygrade=rma(estimate, sei=stderror, method="FE", data=dat.diffvar)
+pes.qualitygrade=predict(pes.logit.qualitygrade, transf=transf.ilogit)
+print(pes.lessthanorequal6, digits=6); print(pes.logit.lessthanorequal6, digits=3)
+
+% Publication bias: funnel plot
+
+funnel(pes.logit,atransf=transf.ilogit,yaxis="sei",xlab="Proportion")
+
+% Egger's test
+
+regtest(pes.logit,model="lm",predictor="sei")
